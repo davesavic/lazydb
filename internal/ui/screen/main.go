@@ -6,12 +6,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/davesavic/lazydb/internal/keybinding"
-	"github.com/davesavic/lazydb/internal/ui"
-	"github.com/davesavic/lazydb/internal/ui/connection"
-	"github.com/davesavic/lazydb/internal/ui/query"
-	"github.com/davesavic/lazydb/internal/ui/result"
-	"github.com/davesavic/lazydb/internal/ui/statusline"
-	"github.com/davesavic/lazydb/internal/ui/table"
+	"github.com/davesavic/lazydb/internal/message"
+	"github.com/davesavic/lazydb/internal/ui/panel/main/connection"
+	"github.com/davesavic/lazydb/internal/ui/panel/main/query"
+	"github.com/davesavic/lazydb/internal/ui/panel/main/result"
+	"github.com/davesavic/lazydb/internal/ui/panel/main/statusline"
+	"github.com/davesavic/lazydb/internal/ui/panel/main/table"
 )
 
 var _ Screen = &Main{}
@@ -69,12 +69,12 @@ func (m *Main) Update(msg tea.Msg) (Screen, tea.Cmd) {
 		m.height = msg.Height
 		m.resizeComponents(m.width, m.height)
 
-	case ui.StatusUpdateMsg:
-		newStatusPanel, cmd := m.statusModel.Update(msg)
-		m.statusModel = newStatusPanel.(*statusline.Model)
-		cmds = append(cmds, cmd)
+	// case navigation.StatusUpdateMsg:
+	// 	newStatusPanel, cmd := m.statusModel.Update(msg)
+	// 	m.statusModel = newStatusPanel.(*statusline.Model)
+	// 	cmds = append(cmds, cmd)
 
-	case ui.NavigationMsg:
+	case message.NavigationMsg:
 		sourcePanel := ComponentIDToPane(msg.Source)
 
 		if sourcePanel != m.activePanel {
@@ -228,49 +228,49 @@ func (m *Main) resizeComponents(width, height int) {
 // Navigation map defines relationships between panes
 type NavigationMap struct {
 	// Maps each pane to its neighbors in each direction
-	relationships map[PanelType]map[ui.NavigationDirection]PanelType
+	relationships map[PanelType]map[message.NavigationDirection]PanelType
 }
 
 // NewNavigationMap creates a navigation map with default relationships
 func NewNavigationMap() NavigationMap {
 	nm := NavigationMap{
-		relationships: make(map[PanelType]map[ui.NavigationDirection]PanelType),
+		relationships: make(map[PanelType]map[message.NavigationDirection]PanelType),
 	}
 
 	// Initialize empty maps for each pane
 	for i := range 4 {
 		pane := PanelType(i)
-		nm.relationships[pane] = make(map[ui.NavigationDirection]PanelType)
+		nm.relationships[pane] = make(map[message.NavigationDirection]PanelType)
 	}
 
 	// Define the relationships
 
 	// PanelConnection navigation
-	nm.Set(PanelConnection, ui.NavDown, PanelTables)
-	nm.Set(PanelConnection, ui.NavRight, PanelQuery)
+	nm.Set(PanelConnection, message.NavDown, PanelTables)
+	nm.Set(PanelConnection, message.NavRight, PanelQuery)
 
 	// PanelTables navigation
-	nm.Set(PanelTables, ui.NavUp, PanelConnection)
-	nm.Set(PanelTables, ui.NavRight, PanelResults)
+	nm.Set(PanelTables, message.NavUp, PanelConnection)
+	nm.Set(PanelTables, message.NavRight, PanelResults)
 
 	// PanelQuery navigation
-	nm.Set(PanelQuery, ui.NavDown, PanelResults)
-	nm.Set(PanelQuery, ui.NavLeft, PanelConnection)
+	nm.Set(PanelQuery, message.NavDown, PanelResults)
+	nm.Set(PanelQuery, message.NavLeft, PanelConnection)
 
 	// PanelResults navigation
-	nm.Set(PanelResults, ui.NavUp, PanelQuery)
-	nm.Set(PanelResults, ui.NavLeft, PanelTables)
+	nm.Set(PanelResults, message.NavUp, PanelQuery)
+	nm.Set(PanelResults, message.NavLeft, PanelTables)
 
 	return nm
 }
 
 // Set defines a directional relationship from one pane to another
-func (nm *NavigationMap) Set(from PanelType, direction ui.NavigationDirection, to PanelType) {
+func (nm *NavigationMap) Set(from PanelType, direction message.NavigationDirection, to PanelType) {
 	nm.relationships[from][direction] = to
 }
 
 // Navigate returns the target pane when navigating from a pane in a direction
-func (nm *NavigationMap) Navigate(from PanelType, direction ui.NavigationDirection) (PanelType, bool) {
+func (nm *NavigationMap) Navigate(from PanelType, direction message.NavigationDirection) (PanelType, bool) {
 	if directions, exists := nm.relationships[from]; exists {
 		if to, defined := directions[direction]; defined {
 			return to, true

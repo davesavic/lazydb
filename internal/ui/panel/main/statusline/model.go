@@ -3,7 +3,7 @@ package statusline
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/davesavic/lazydb/internal/ui"
+	"github.com/davesavic/lazydb/internal/message"
 )
 
 var _ tea.Model = &Model{}
@@ -23,7 +23,7 @@ func (m *Model) Init() tea.Cmd {
 // Update implements tea.Model.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case ui.StatusUpdateMsg:
+	case message.StatusUpdateMsg:
 		m.status = msg.Status
 		m.message = msg.Message
 	}

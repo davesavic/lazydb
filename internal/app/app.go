@@ -6,7 +6,9 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/davesavic/lazydb/internal/keybinding"
+	"github.com/davesavic/lazydb/internal/message"
 	"github.com/davesavic/lazydb/internal/ui/screen"
+	"github.com/davesavic/lazydb/internal/ui/screen/newconnection"
 )
 
 var _ tea.Model = &App{}
@@ -23,6 +25,7 @@ func NewApp() *App {
 	keys := keybinding.NewKeymap()
 	screens := make(map[screen.Type]screen.Screen)
 	screens[screen.TypeMain] = screen.NewMain(keys)
+	screens[screen.TypeNewConnection] = newconnection.NewNewConnection()
 
 	return &App{
 		keys:          keys,
@@ -47,7 +50,13 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, a.keys.Quit):
 			return a, tea.Quit
 		case key.Matches(msg, a.keys.Help):
+			cmds = append(cmds, message.NewChangeScreenCmd(1))
 		}
+
+	case message.ChangeScreenMsg:
+		slog.Debug("ChangeScreenMsg", "ScreenType", msg.ScreenType)
+		a.currentScreen = a.screens[screen.Type(msg.ScreenType)]
+		cmds = append(cmds, a.currentScreen.Init())
 	}
 
 	newScreen, cmd := a.currentScreen.Update(msg)

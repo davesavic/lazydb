@@ -5,7 +5,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/davesavic/lazydb/internal/keybinding"
-	"github.com/davesavic/lazydb/internal/ui"
+	"github.com/davesavic/lazydb/internal/message"
 )
 
 var _ tea.Model = &Model{}
@@ -37,13 +37,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.keys.NavigateDown):
-			cmds = append(cmds, ui.RequestNavigationCmd(ui.NavDown, m.id))
+			cmds = append(cmds, message.RequestNavigationCmd(message.NavDown, m.id))
 		case key.Matches(msg, m.keys.NavigateRight):
-			cmds = append(cmds, ui.RequestNavigationCmd(ui.NavRight, m.id))
+			cmds = append(cmds, message.RequestNavigationCmd(message.NavRight, m.id))
 		case key.Matches(msg, m.keys.NavigateUp):
-			cmds = append(cmds, ui.RequestNavigationCmd(ui.NavUp, m.id))
+			cmds = append(cmds, message.RequestNavigationCmd(message.NavUp, m.id))
 		case key.Matches(msg, m.keys.NavigateLeft):
-			cmds = append(cmds, ui.RequestNavigationCmd(ui.NavLeft, m.id))
+			cmds = append(cmds, message.RequestNavigationCmd(message.NavLeft, m.id))
 		}
 	}
 

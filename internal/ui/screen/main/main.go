@@ -1,12 +1,12 @@
-package screen
+package mainscreen
 
 import (
 	"log/slog"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/davesavic/lazydb/internal/keybinding"
 	"github.com/davesavic/lazydb/internal/message"
+	"github.com/davesavic/lazydb/internal/ui/common"
 	"github.com/davesavic/lazydb/internal/ui/panel/main/connection"
 	"github.com/davesavic/lazydb/internal/ui/panel/main/query"
 	"github.com/davesavic/lazydb/internal/ui/panel/main/result"
@@ -14,13 +14,13 @@ import (
 	"github.com/davesavic/lazydb/internal/ui/panel/main/table"
 )
 
-var _ Screen = &Main{}
-
 type Main struct {
 	width  int
 	height int
 
-	activePanel PanelType
+	messageManager *message.Manager
+
+	activePanel PanelID
 	navMap      NavigationMap
 
 	// Panels
@@ -31,16 +31,16 @@ type Main struct {
 	statusModel     *statusline.Model
 }
 
-func NewMain(keys *keybinding.Keymap) *Main {
+func NewMain(props *common.ScreenProps) *Main {
 	slog.Debug("NewMain")
 
 	return &Main{
 		activePanel:     PanelConnection,
 		navMap:          NewNavigationMap(),
-		connectionModel: connection.NewModel(keys),
-		queryModel:      query.NewModel(keys),
-		resultsModel:    result.NewModel(keys),
-		tablesModel:     table.NewModel(keys),
+		connectionModel: connection.NewModel(props),
+		queryModel:      query.NewModel(props),
+		resultsModel:    result.NewModel(props),
+		tablesModel:     table.NewModel(props),
 		statusModel:     statusline.NewModel(),
 	}
 }
@@ -59,7 +59,7 @@ func (m *Main) Init() tea.Cmd {
 }
 
 // Update implements Screen.
-func (m *Main) Update(msg tea.Msg) (Screen, tea.Cmd) {
+func (m *Main) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	slog.Debug("Main.Update")
 	var cmds []tea.Cmd
 
@@ -74,10 +74,8 @@ func (m *Main) Update(msg tea.Msg) (Screen, tea.Cmd) {
 	// 	m.statusModel = newStatusPanel.(*statusline.Model)
 	// 	cmds = append(cmds, cmd)
 
-	case message.NavigationMsg:
-		sourcePanel := ComponentIDToPane(msg.Source)
-
-		if sourcePanel != m.activePanel {
+	case message.NavigateDirectionMsg:
+		if PanelID(msg.Source) != m.activePanel {
 			return m, nil
 		}
 
@@ -228,94 +226,54 @@ func (m *Main) resizeComponents(width, height int) {
 // Navigation map defines relationships between panes
 type NavigationMap struct {
 	// Maps each pane to its neighbors in each direction
-	relationships map[PanelType]map[message.NavigationDirection]PanelType
+	relationships map[PanelID]map[message.Direction]PanelID
 }
 
 // NewNavigationMap creates a navigation map with default relationships
 func NewNavigationMap() NavigationMap {
 	nm := NavigationMap{
-		relationships: make(map[PanelType]map[message.NavigationDirection]PanelType),
+		relationships: make(map[PanelID]map[message.Direction]PanelID),
 	}
 
-	// Initialize empty maps for each pane
-	for i := range 4 {
-		pane := PanelType(i)
-		nm.relationships[pane] = make(map[message.NavigationDirection]PanelType)
-	}
+	nm.relationships[PanelConnection] = make(map[message.Direction]PanelID)
+	nm.Set(PanelConnection, "down", PanelTables)
+	nm.Set(PanelConnection, "right", PanelQuery)
 
-	// Define the relationships
+	nm.relationships[PanelTables] = make(map[message.Direction]PanelID)
+	nm.Set(PanelTables, "up", PanelConnection)
+	nm.Set(PanelTables, "right", PanelResults)
 
-	// PanelConnection navigation
-	nm.Set(PanelConnection, message.NavDown, PanelTables)
-	nm.Set(PanelConnection, message.NavRight, PanelQuery)
+	nm.relationships[PanelQuery] = make(map[message.Direction]PanelID)
+	nm.Set(PanelQuery, "down", PanelResults)
+	nm.Set(PanelQuery, "left", PanelConnection)
 
-	// PanelTables navigation
-	nm.Set(PanelTables, message.NavUp, PanelConnection)
-	nm.Set(PanelTables, message.NavRight, PanelResults)
-
-	// PanelQuery navigation
-	nm.Set(PanelQuery, message.NavDown, PanelResults)
-	nm.Set(PanelQuery, message.NavLeft, PanelConnection)
-
-	// PanelResults navigation
-	nm.Set(PanelResults, message.NavUp, PanelQuery)
-	nm.Set(PanelResults, message.NavLeft, PanelTables)
+	nm.relationships[PanelResults] = make(map[message.Direction]PanelID)
+	nm.Set(PanelResults, "up", PanelQuery)
+	nm.Set(PanelResults, "left", PanelTables)
 
 	return nm
 }
 
 // Set defines a directional relationship from one pane to another
-func (nm *NavigationMap) Set(from PanelType, direction message.NavigationDirection, to PanelType) {
+func (nm *NavigationMap) Set(from PanelID, direction message.Direction, to PanelID) {
 	nm.relationships[from][direction] = to
 }
 
 // Navigate returns the target pane when navigating from a pane in a direction
-func (nm *NavigationMap) Navigate(from PanelType, direction message.NavigationDirection) (PanelType, bool) {
+func (nm *NavigationMap) Navigate(from PanelID, direction message.Direction) (PanelID, bool) {
 	if directions, exists := nm.relationships[from]; exists {
 		if to, defined := directions[direction]; defined {
 			return to, true
 		}
 	}
-	return from, false // Return same pane if no navigation defined
+	return from, false
 }
 
-// PaneToComponentID maps a pane type to its component ID
-func PaneToComponentID(pane PanelType) string {
-	switch pane {
-	case PanelConnection:
-		return "connections"
-	case PanelTables:
-		return "tables"
-	case PanelQuery:
-		return "query"
-	case PanelResults:
-		return "results"
-	default:
-		return ""
-	}
-}
-
-// ComponentIDToPane maps a component ID to its pane type
-func ComponentIDToPane(id string) PanelType {
-	switch id {
-	case "connections":
-		return PanelConnection
-	case "tables":
-		return PanelTables
-	case "query":
-		return PanelQuery
-	case "results":
-		return PanelResults
-	default:
-		return PanelConnection
-	}
-}
-
-type PanelType int
+type PanelID string
 
 const (
-	PanelConnection PanelType = iota
-	PanelQuery
-	PanelResults
-	PanelTables
+	PanelConnection PanelID = "connections"
+	PanelQuery      PanelID = "query"
+	PanelResults    PanelID = "results"
+	PanelTables     PanelID = "tables"
 )

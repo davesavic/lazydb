@@ -6,6 +6,7 @@ import "github.com/charmbracelet/bubbles/key"
 type Keymap struct {
 	// Global keybindings
 	Quit          key.Binding
+	Cancel        key.Binding
 	Help          key.Binding
 	NavigateUp    key.Binding
 	NavigateDown  key.Binding
@@ -24,6 +25,10 @@ func NewKeymap() *Keymap {
 		Quit: key.NewBinding(
 			key.WithKeys("ctrl+c"),
 			key.WithHelp("ctrl+c", "Quit"),
+		),
+		Cancel: key.NewBinding(
+			key.WithKeys("esc"),
+			key.WithHelp("esc", "Cancel"),
 		),
 		Help: key.NewBinding(
 			key.WithKeys("?"),

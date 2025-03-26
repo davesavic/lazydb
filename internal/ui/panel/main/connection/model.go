@@ -5,18 +5,18 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/davesavic/lazydb/internal/keybinding"
 	"github.com/davesavic/lazydb/internal/message"
+	"github.com/davesavic/lazydb/internal/ui/common"
 )
 
 var _ tea.Model = &Model{}
 
 type Model struct {
-	id     string
-	keys   *keybinding.Keymap
-	list   list.Model
-	width  int
-	height int
+	id          string
+	screenProps *common.ScreenProps
+	list        list.Model
+	width       int
+	height      int
 }
 
 type listItem struct {
@@ -50,14 +50,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case msg.String() == "q":
 			return m, nil
-		case key.Matches(msg, m.keys.NavigateDown):
-			cmds = append(cmds, message.RequestNavigationCmd(message.NavDown, m.id))
-		case key.Matches(msg, m.keys.NavigateRight):
-			cmds = append(cmds, message.RequestNavigationCmd(message.NavRight, m.id))
-		case key.Matches(msg, m.keys.NavigateUp):
-			cmds = append(cmds, message.RequestNavigationCmd(message.NavUp, m.id))
-		case key.Matches(msg, m.keys.NavigateLeft):
-			cmds = append(cmds, message.RequestNavigationCmd(message.NavLeft, m.id))
+		case key.Matches(msg, m.screenProps.Keymap.AddConnection):
+			cmds = append(cmds, m.screenProps.MessageManager.NewChangeScreenCmd(message.ScreenNameNewConnection))
+		case key.Matches(msg, m.screenProps.Keymap.NavigateDown):
+			cmds = append(cmds, m.screenProps.MessageManager.NewNavigateDirectionCmd(message.DirectionDown, m.id))
+		case key.Matches(msg, m.screenProps.Keymap.NavigateRight):
+			cmds = append(cmds, m.screenProps.MessageManager.NewNavigateDirectionCmd(message.DirectionRight, m.id))
+		case key.Matches(msg, m.screenProps.Keymap.NavigateUp):
+			cmds = append(cmds, m.screenProps.MessageManager.NewNavigateDirectionCmd(message.DirectionUp, m.id))
+		case key.Matches(msg, m.screenProps.Keymap.NavigateLeft):
+			cmds = append(cmds, m.screenProps.MessageManager.NewNavigateDirectionCmd(message.DirectionLeft, m.id))
 		}
 	}
 
@@ -77,15 +79,15 @@ func (m *Model) View() string {
 		Render(m.list.View())
 }
 
-func NewModel(keys *keybinding.Keymap) *Model {
+func NewModel(props *common.ScreenProps) *Model {
 	l := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
 	l.Title = "Connections"
 	l.SetShowHelp(false)
 
 	return &Model{
-		id:   "connections",
-		keys: keys,
-		list: l,
+		id:          "connections",
+		screenProps: props,
+		list:        l,
 	}
 }
 

@@ -5,30 +5,29 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/davesavic/lazydb/internal/keybinding"
-	"github.com/davesavic/lazydb/internal/message"
+	"github.com/davesavic/lazydb/internal/ui/common"
 )
 
 var _ tea.Model = &Model{}
 
 type Model struct {
-	id     string
-	keys   *keybinding.Keymap
-	width  int
-	height int
+	id          string
+	screenProps *common.ScreenProps
+	width       int
+	height      int
 
 	textarea textarea.Model
 }
 
-func NewModel(keys *keybinding.Keymap) *Model {
+func NewModel(props *common.ScreenProps) *Model {
 	textareaModel := textarea.New()
 	textareaModel.Reset()
 	textareaModel.SetCursor(0)
 
 	return &Model{
-		id:       "query",
-		keys:     keys,
-		textarea: textareaModel,
+		id:          "query",
+		screenProps: props,
+		textarea:    textareaModel,
 	}
 }
 
@@ -44,16 +43,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, m.keys.ExecuteQuery):
+		case key.Matches(msg, m.screenProps.Keymap.ExecuteQuery):
 			// cmds = append(cmds, ui.RequestQueryCmd(m.id))
-		case key.Matches(msg, m.keys.NavigateDown):
-			cmds = append(cmds, message.RequestNavigationCmd(message.NavDown, m.id))
-		case key.Matches(msg, m.keys.NavigateRight):
-			cmds = append(cmds, message.RequestNavigationCmd(message.NavRight, m.id))
-		case key.Matches(msg, m.keys.NavigateUp):
-			cmds = append(cmds, message.RequestNavigationCmd(message.NavUp, m.id))
-		case key.Matches(msg, m.keys.NavigateLeft):
-			cmds = append(cmds, message.RequestNavigationCmd(message.NavLeft, m.id))
+		case key.Matches(msg, m.screenProps.Keymap.NavigateDown):
+			cmds = append(cmds, m.screenProps.MessageManager.NewNavigateDirectionCmd("down", m.id))
+		case key.Matches(msg, m.screenProps.Keymap.NavigateRight):
+			cmds = append(cmds, m.screenProps.MessageManager.NewNavigateDirectionCmd("right", m.id))
+		case key.Matches(msg, m.screenProps.Keymap.NavigateUp):
+			cmds = append(cmds, m.screenProps.MessageManager.NewNavigateDirectionCmd("up", m.id))
+		case key.Matches(msg, m.screenProps.Keymap.NavigateLeft):
+			cmds = append(cmds, m.screenProps.MessageManager.NewNavigateDirectionCmd("left", m.id))
 		}
 	}
 

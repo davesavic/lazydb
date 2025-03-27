@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
-	"github.com/davesavic/lazydb/internal/message"
+	"github.com/davesavic/lazydb/internal/service/message"
 	"github.com/davesavic/lazydb/internal/ui/common"
 )
 
@@ -72,8 +72,16 @@ func (n *NewConnection) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if n.form.State == huh.StateCompleted {
 		slog.Debug("NewConnection.Update", "result", n.result)
-		//TODO: Clear the form values
-		return n, n.screenProps.MessageManager.NewAddConnectionCmd(n.result)
+		copiedResult := *n.result
+		n.result = &Connection{}
+		return n, n.screenProps.MessageManager.NewAddConnectionCmd(message.NewAddConnectionMsg{
+			Type:     copiedResult.Type,
+			Host:     copiedResult.Host,
+			Port:     copiedResult.Port,
+			Database: copiedResult.Database,
+			User:     copiedResult.User,
+			Password: copiedResult.Password,
+		})
 	}
 
 	return n, cmd

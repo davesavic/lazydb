@@ -86,3 +86,23 @@ func (m *Manager) NewAddConnectionCmd(msg NewAddConnectionMsg) tea.Cmd {
 		return msg
 	}
 }
+
+type LoadConnectionMsg struct {
+	Name string
+}
+
+func (m *Manager) NewLoadConnectionCmd(msg LoadConnectionMsg) tea.Cmd {
+	slog.Debug("NewLoadConnectionCmd", "msg", msg)
+	return func() tea.Msg {
+		return msg
+	}
+}
+
+type NewConnectionLoadedMsg struct{}
+
+func (m *Manager) NewNewConnectionLoadedCmd() tea.Cmd {
+	slog.Debug("NewNewConnectionLoadedCmd")
+	return func() tea.Msg {
+		return NewConnectionLoadedMsg{}
+	}
+}

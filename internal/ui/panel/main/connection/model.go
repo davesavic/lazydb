@@ -1,11 +1,13 @@
 package connection
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/davesavic/lazydb/internal/message"
+	"github.com/davesavic/lazydb/internal/service/message"
 	"github.com/davesavic/lazydb/internal/ui/common"
 )
 
@@ -38,6 +40,14 @@ func (l listItem) FilterValue() string {
 
 // Init implements tea.Model.
 func (m *Model) Init() tea.Cmd {
+	consCfg, _ := m.screenProps.ConfigService.LoadConnections("connections.toml")
+	items := make([]list.Item, 0, len(consCfg.Connections))
+	for name, c := range consCfg.Connections {
+		items = append(items, listItem{name: name, description: fmt.Sprintf("%s - %s:%s", c.Type, c.Host, c.Port)})
+	}
+	m.list.SetItems(items)
+	m.list.SetShowStatusBar(false)
+
 	return nil
 }
 
@@ -50,6 +60,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case msg.String() == "q":
 			return m, nil
+		case msg.String() == "enter":
+			selected := m.list.SelectedItem()
+			if selected == nil {
+				return m, nil
+			}
+
+			cmds = append(cmds, m.screenProps.MessageManager.NewLoadConnectionCmd(message.LoadConnectionMsg{
+				Name: selected.FilterValue(),
+			}))
 		case key.Matches(msg, m.screenProps.Keymap.AddConnection):
 			cmds = append(cmds, m.screenProps.MessageManager.NewChangeScreenCmd(message.ScreenNameNewConnection))
 		case key.Matches(msg, m.screenProps.Keymap.NavigateDown):
@@ -83,6 +102,7 @@ func NewModel(props *common.ScreenProps) *Model {
 	l := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
 	l.Title = "Connections"
 	l.SetShowHelp(false)
+	l.SetShowStatusBar(false)
 
 	return &Model{
 		id:          "connections",

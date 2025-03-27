@@ -1,8 +1,8 @@
-package manager
+package screenmanager
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/davesavic/lazydb/internal/message"
+	"github.com/davesavic/lazydb/internal/service/message"
 	"github.com/davesavic/lazydb/internal/ui/common"
 	"github.com/davesavic/lazydb/internal/ui/screen/connection"
 	mainscreen "github.com/davesavic/lazydb/internal/ui/screen/main"

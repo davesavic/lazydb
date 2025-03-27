@@ -6,28 +6,38 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/davesavic/lazydb/internal/keybinding"
-	"github.com/davesavic/lazydb/internal/message"
+	"github.com/davesavic/lazydb/internal/service/config"
+	"github.com/davesavic/lazydb/internal/service/database"
+	"github.com/davesavic/lazydb/internal/service/message"
+	screenmanager "github.com/davesavic/lazydb/internal/service/screen"
 	"github.com/davesavic/lazydb/internal/ui/common"
-	"github.com/davesavic/lazydb/internal/ui/manager"
 )
 
 var _ tea.Model = &App{}
 
 // App is the main application struct that holds the state of the application.
 type App struct {
-	keys           *keybinding.Keymap
-	screenManager  *manager.Screen
-	messageManager *message.Manager
+	keys            *keybinding.Keymap
+	screenManager   *screenmanager.Screen
+	messageManager  *message.Manager
+	configService   *config.Service
+	databaseService *database.Postgres
 }
 
 func NewApp() *App {
 	keys := keybinding.NewKeymap()
+	db := database.NewPostgres()
+	configService := config.NewService()
 
 	return &App{
-		keys: keys,
-		screenManager: manager.NewScreen(&common.ScreenProps{
-			MessageManager: message.NewManager(),
-			Keymap:         keys,
+		keys:            keys,
+		configService:   configService,
+		databaseService: db,
+		screenManager: screenmanager.NewScreen(&common.ScreenProps{
+			MessageManager:  message.NewManager(),
+			DatabaseService: db,
+			ConfigService:   configService,
+			Keymap:          keys,
 		}),
 	}
 }
@@ -35,7 +45,9 @@ func NewApp() *App {
 // Init implements tea.Model.
 func (a *App) Init() tea.Cmd {
 	slog.Info("App.Init")
-	return tea.Batch(a.screenManager.Init())
+	return tea.Batch(
+		a.screenManager.Init(),
+	)
 }
 
 // Update implements tea.Model.
@@ -48,10 +60,30 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, a.keys.Quit):
 			return a, tea.Quit
 		}
+
+	case message.LoadConnectionMsg:
+		slog.Debug("App.Update.LoadConnectionMsg", "msg", msg)
+		// Get connection from config
+		consCfg, err := a.configService.GetConnection(msg.Name)
+		if err != nil {
+			// return a, a.messageManager.NewErrorCmd(err)
+			slog.Error("App.Update.LoadConnectionMsg", "error", err)
+			return a, tea.Quit
+		}
+
+		err = a.databaseService.Connect(*consCfg)
+		if err != nil {
+			// return a, a.messageManager.NewErrorCmd(err)
+			slog.Error("App.Update.LoadConnectionMsg", "error", err)
+			return a, tea.Quit
+		}
+
+		// Notify the screens of the new connection
+		cmds = append(cmds, a.messageManager.NewNewConnectionLoadedCmd())
 	}
 
 	screenModel, cmd := a.screenManager.Update(msg)
-	if sm, ok := screenModel.(*manager.Screen); ok {
+	if sm, ok := screenModel.(*screenmanager.Screen); ok {
 		a.screenManager = sm
 		cmds = append(cmds, cmd)
 	}

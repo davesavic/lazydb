@@ -3,7 +3,7 @@ package statusline
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/davesavic/lazydb/internal/message"
+	"github.com/davesavic/lazydb/internal/service/message"
 )
 
 var _ tea.Model = &Model{}

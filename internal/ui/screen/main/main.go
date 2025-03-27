@@ -5,7 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/davesavic/lazydb/internal/message"
+	"github.com/davesavic/lazydb/internal/service/message"
 	"github.com/davesavic/lazydb/internal/ui/common"
 	"github.com/davesavic/lazydb/internal/ui/panel/main/connection"
 	"github.com/davesavic/lazydb/internal/ui/panel/main/query"
@@ -19,9 +19,8 @@ type Main struct {
 	height int
 
 	messageManager *message.Manager
-
-	activePanel PanelID
-	navMap      NavigationMap
+	activePanel    PanelID
+	navMap         NavigationMap
 
 	// Panels
 	connectionModel *connection.Model
@@ -37,6 +36,7 @@ func NewMain(props *common.ScreenProps) *Main {
 	return &Main{
 		activePanel:     PanelConnection,
 		navMap:          NewNavigationMap(),
+		messageManager:  props.MessageManager,
 		connectionModel: connection.NewModel(props),
 		queryModel:      query.NewModel(props),
 		resultsModel:    result.NewModel(props),
@@ -64,15 +64,16 @@ func (m *Main) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
+	case message.NewConnectionLoadedMsg:
+		newTable, cmd := m.tablesModel.Update(msg)
+		m.tablesModel = newTable.(*table.Model)
+		cmds = append(cmds, cmd)
+		cmds = append(cmds, m.messageManager.NewNavigateDirectionCmd(message.DirectionDown, "connections"))
+
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
 		m.resizeComponents(m.width, m.height)
-
-	// case navigation.StatusUpdateMsg:
-	// 	newStatusPanel, cmd := m.statusModel.Update(msg)
-	// 	m.statusModel = newStatusPanel.(*statusline.Model)
-	// 	cmds = append(cmds, cmd)
 
 	case message.NavigateDirectionMsg:
 		if PanelID(msg.Source) != m.activePanel {

@@ -51,8 +51,8 @@ func NewKeymap() *Keymap {
 			key.WithHelp("ctrl+l", "Navigate right"),
 		),
 		ExecuteQuery: key.NewBinding(
-			key.WithKeys("ctrl+enter"),
-			key.WithHelp("ctrl+enter", "Execute query"),
+			key.WithKeys("ctrl+e"),
+			key.WithHelp("ctrl+e", "Execute query"),
 		),
 		AddConnection: key.NewBinding(
 			key.WithKeys("ctrl+n"),

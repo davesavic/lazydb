@@ -63,7 +63,6 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case message.LoadConnectionMsg:
 		slog.Debug("App.Update.LoadConnectionMsg", "msg", msg)
-		// Get connection from config
 		consCfg, err := a.configService.GetConnection(msg.Name)
 		if err != nil {
 			// return a, a.messageManager.NewErrorCmd(err)
@@ -78,8 +77,17 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, tea.Quit
 		}
 
-		// Notify the screens of the new connection
 		cmds = append(cmds, a.messageManager.NewNewConnectionLoadedCmd())
+	case message.ExecuteQueryMsg:
+		slog.Debug("App.Update.ExecuteQueryMsg", "msg", msg)
+		result, err := a.databaseService.ExecuteQuery(msg.Query)
+		if err != nil {
+			// return a, a.messageManager.NewErrorCmd(err)
+			slog.Error("App.Update.ExecuteQueryMsg", "error", err)
+			return a, tea.Quit
+		}
+
+		cmds = append(cmds, a.messageManager.NewQueryExecutedCmd(result))
 	}
 
 	screenModel, cmd := a.screenManager.Update(msg)

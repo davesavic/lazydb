@@ -75,6 +75,11 @@ func (m *Main) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.resizeComponents(m.width, m.height)
 
+	case message.QueryExecutedMsg:
+		newResults, cmd := m.resultsModel.Update(msg)
+		m.resultsModel = newResults.(*result.Model)
+		cmds = append(cmds, cmd)
+
 	case message.NavigateDirectionMsg:
 		if PanelID(msg.Source) != m.activePanel {
 			return m, nil

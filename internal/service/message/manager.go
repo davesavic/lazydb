@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/davesavic/lazydb/internal/service/database"
 )
 
 // Manager is the manager used for triggering event messages.
@@ -104,5 +105,31 @@ func (m *Manager) NewNewConnectionLoadedCmd() tea.Cmd {
 	slog.Debug("NewNewConnectionLoadedCmd")
 	return func() tea.Msg {
 		return NewConnectionLoadedMsg{}
+	}
+}
+
+type ExecuteQueryMsg struct {
+	Query string
+}
+
+func (m *Manager) NewExecuteQueryCmd(query string) tea.Cmd {
+	slog.Debug("NewExecuteQueryCmd", "query", query)
+	return func() tea.Msg {
+		return ExecuteQueryMsg{
+			Query: query,
+		}
+	}
+}
+
+type QueryExecutedMsg struct {
+	Result *database.Result
+}
+
+func (m *Manager) NewQueryExecutedCmd(result *database.Result) tea.Cmd {
+	slog.Debug("NewQueryExecutedCmd", "result", result)
+	return func() tea.Msg {
+		return QueryExecutedMsg{
+			Result: result,
+		}
 	}
 }

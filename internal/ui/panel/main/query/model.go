@@ -5,6 +5,7 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/davesavic/lazydb/internal/service/message"
 	"github.com/davesavic/lazydb/internal/ui/common"
 )
 
@@ -44,15 +45,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.screenProps.Keymap.ExecuteQuery):
-			// cmds = append(cmds, ui.RequestQueryCmd(m.id))
+			return m, m.screenProps.MessageManager.NewExecuteQueryCmd(m.textarea.Value())
 		case key.Matches(msg, m.screenProps.Keymap.NavigateDown):
-			cmds = append(cmds, m.screenProps.MessageManager.NewNavigateDirectionCmd("down", m.id))
+			cmds = append(cmds, m.screenProps.MessageManager.NewNavigateDirectionCmd(message.DirectionDown, m.id))
 		case key.Matches(msg, m.screenProps.Keymap.NavigateRight):
-			cmds = append(cmds, m.screenProps.MessageManager.NewNavigateDirectionCmd("right", m.id))
+			cmds = append(cmds, m.screenProps.MessageManager.NewNavigateDirectionCmd(message.DirectionRight, m.id))
 		case key.Matches(msg, m.screenProps.Keymap.NavigateUp):
-			cmds = append(cmds, m.screenProps.MessageManager.NewNavigateDirectionCmd("up", m.id))
+			cmds = append(cmds, m.screenProps.MessageManager.NewNavigateDirectionCmd(message.DirectionUp, m.id))
 		case key.Matches(msg, m.screenProps.Keymap.NavigateLeft):
-			cmds = append(cmds, m.screenProps.MessageManager.NewNavigateDirectionCmd("left", m.id))
+			cmds = append(cmds, m.screenProps.MessageManager.NewNavigateDirectionCmd(message.DirectionLeft, m.id))
 		}
 	}
 

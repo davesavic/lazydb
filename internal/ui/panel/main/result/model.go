@@ -4,8 +4,8 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/davesavic/lazydb/internal/service/database"
 	"github.com/davesavic/lazydb/internal/service/message"
+	"github.com/davesavic/lazydb/internal/service/plugin"
 	"github.com/davesavic/lazydb/internal/ui/common"
 	"github.com/evertras/bubble-table/table"
 )
@@ -19,7 +19,7 @@ type Model struct {
 	height      int
 
 	table   *table.Model
-	results *database.Result
+	results *plugin.QueryResult
 }
 
 func NewModel(props *common.ScreenProps) *Model {
@@ -42,22 +42,21 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case message.QueryExecutedMsg:
 		m.results = msg.Result
-		columns := make([]table.Column, len(m.results.Columns))
-		for i, col := range m.results.Columns {
-			columns[i] = table.NewFlexColumn(
-				col.Name,
-				col.Name,
-				m.width/len(m.results.Columns),
-			)
+
+		// Extract column names from the first row
+		columns := make([]table.Column, 0)
+		if len(m.results.Columns) > 0 {
+			for _, title := range m.results.Columns {
+				columns = append(columns, table.NewColumn(title, title, 25))
+			}
 		}
 
-		rows := make([]table.Row, len(m.results.Rows))
-		for i, row := range m.results.Rows {
-			rows[i] = table.NewRow(row)
+		rows := make([]table.Row, 0)
+		for _, row := range m.results.Rows {
+			rows = append(rows, table.NewRow(row))
 		}
 
-		t := table.New(columns).
-			WithRows(rows).WithTargetWidth(m.width).WithMinimumHeight(m.height)
+		t := table.New(columns).WithRows(rows)
 
 		m.table = &t
 

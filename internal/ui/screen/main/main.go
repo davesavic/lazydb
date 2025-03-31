@@ -76,6 +76,7 @@ func (m *Main) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.resizeComponents(m.width, m.height)
 
 	case message.QueryExecutedMsg:
+		slog.Debug("Main.Update.QueryExecutedMsg", "msg", msg)
 		newResults, cmd := m.resultsModel.Update(msg)
 		m.resultsModel = newResults.(*result.Model)
 		cmds = append(cmds, cmd)
@@ -193,6 +194,7 @@ func (m *Main) renderQuerySection() string {
 		resultsView,
 	)
 }
+
 func (m *Main) resizeComponents(width, height int) {
 	// Add padding
 	fullWidth := width

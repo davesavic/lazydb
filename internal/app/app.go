@@ -1,16 +1,19 @@
 package app
 
 import (
+	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/davesavic/lazydb/internal/keybinding"
 	"github.com/davesavic/lazydb/internal/service/config"
-	"github.com/davesavic/lazydb/internal/service/database"
 	"github.com/davesavic/lazydb/internal/service/message"
+	"github.com/davesavic/lazydb/internal/service/plugin"
 	screenmanager "github.com/davesavic/lazydb/internal/service/screen"
 	"github.com/davesavic/lazydb/internal/ui/common"
+	"github.com/hashicorp/go-hclog"
 )
 
 var _ tea.Model = &App{}
@@ -21,21 +24,37 @@ type App struct {
 	screenManager   *screenmanager.Screen
 	messageManager  *message.Manager
 	configService   *config.Service
-	databaseService *database.Postgres
+	databaseService plugin.DatabasePlugin
+	pluginManager   *plugin.Manager
 }
 
 func NewApp() *App {
 	keys := keybinding.NewKeymap()
-	db := database.NewPostgres()
 	configService := config.NewService()
+
+	logger := hclog.New(&hclog.LoggerOptions{
+		Name:       "lazydb",
+		Level:      hclog.Trace,
+		Output:     os.Stdout,
+		JSONFormat: true,
+	})
+	pluginManager := plugin.NewManager(logger)
+	pluginManager.LoadPlugins("bin")
+
+	dbPlugin, ok := pluginManager.GetPlugin("postgres")
+	if !ok {
+		slog.Error("App.NewApp", "error", "could not get plugin")
+		panic("could not get plugin")
+	}
 
 	return &App{
 		keys:            keys,
 		configService:   configService,
-		databaseService: db,
+		databaseService: dbPlugin,
+		pluginManager:   pluginManager,
 		screenManager: screenmanager.NewScreen(&common.ScreenProps{
 			MessageManager:  message.NewManager(),
-			DatabaseService: db,
+			DatabaseService: dbPlugin,
 			ConfigService:   configService,
 			Keymap:          keys,
 		}),
@@ -65,26 +84,26 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		slog.Debug("App.Update.LoadConnectionMsg", "msg", msg)
 		consCfg, err := a.configService.GetConnection(msg.Name)
 		if err != nil {
-			// return a, a.messageManager.NewErrorCmd(err)
 			slog.Error("App.Update.LoadConnectionMsg", "error", err)
 			return a, tea.Quit
+			// return a, a.messageManager.NewErrorCmd(err)
 		}
 
-		err = a.databaseService.Connect(*consCfg)
+		err = a.databaseService.Connect(fmt.Sprintf("postgres://%s:%s@%s:%s/%s", consCfg.User, consCfg.Password, consCfg.Host, consCfg.Port, consCfg.Database))
 		if err != nil {
-			// return a, a.messageManager.NewErrorCmd(err)
 			slog.Error("App.Update.LoadConnectionMsg", "error", err)
 			return a, tea.Quit
+			// return a, a.messageManager.NewErrorCmd(err)
 		}
 
 		cmds = append(cmds, a.messageManager.NewNewConnectionLoadedCmd())
 	case message.ExecuteQueryMsg:
 		slog.Debug("App.Update.ExecuteQueryMsg", "msg", msg)
-		result, err := a.databaseService.ExecuteQuery(msg.Query)
+		result, err := a.databaseService.Run(msg.Query)
 		if err != nil {
-			// return a, a.messageManager.NewErrorCmd(err)
 			slog.Error("App.Update.ExecuteQueryMsg", "error", err)
 			return a, tea.Quit
+			// return a, a.messageManager.NewErrorCmd(err)
 		}
 
 		cmds = append(cmds, a.messageManager.NewQueryExecutedCmd(result))

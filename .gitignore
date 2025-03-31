@@ -1,2 +1,4 @@
 lazydb.log
+postgres.log
 connections.toml
+bin/

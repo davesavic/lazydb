@@ -1,7 +1,6 @@
 package table
 
 import (
-	"log/slog"
 	"sort"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -62,11 +61,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case message.NewConnectionLoadedMsg:
-		tables, err := m.screenProps.DatabaseService.GetTables()
-		if err != nil {
-			slog.Error("failed to get tables", "error", err)
-			// return m, m.screenProps.MessageManager.NewErrorCmd(err)
-		}
+		tables := []string{"table1", "table2", "table3"}
 
 		sort.Strings(tables)
 

@@ -205,8 +205,8 @@ func (m *Main) resizeComponents(width, height int) {
 	// Reserve space for status bar
 	contentHeight := height - 5
 
-	// Left panel: 30% of width
-	leftWidth := width * 3 / 10
+	// Left panel: 20% of width
+	leftWidth := width * 2 / 10
 
 	// Right panel: 70% of width
 	rightWidth := width - leftWidth

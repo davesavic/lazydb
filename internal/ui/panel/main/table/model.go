@@ -37,6 +37,7 @@ func (l listItem) Description() string {
 func (l listItem) FilterValue() string {
 	return l.name
 }
+
 func NewModel(props *common.ScreenProps) *Model {
 	l := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
 	l.Title = "Tables"
@@ -61,7 +62,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case message.NewConnectionLoadedMsg:
-		tables := []string{"table1", "table2", "table3"}
+		tables, err := m.screenProps.DatabaseService.GetTables()
+		if err != nil {
+			return m, nil
+		}
 
 		sort.Strings(tables)
 
@@ -110,9 +114,7 @@ func (m *Model) SetSize(width, height int) {
 }
 
 func (m *Model) Focus() {
-
 }
 
 func (m *Model) Blur() {
-
 }

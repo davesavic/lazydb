@@ -1,19 +1,16 @@
 package app
 
 import (
-	"fmt"
 	"log/slog"
-	"os"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/davesavic/lazydb/internal/keybinding"
 	"github.com/davesavic/lazydb/internal/service/config"
+	"github.com/davesavic/lazydb/internal/service/database"
 	"github.com/davesavic/lazydb/internal/service/message"
-	"github.com/davesavic/lazydb/internal/service/plugin"
 	screenmanager "github.com/davesavic/lazydb/internal/service/screen"
 	"github.com/davesavic/lazydb/internal/ui/common"
-	"github.com/hashicorp/go-hclog"
 )
 
 var _ tea.Model = &App{}
@@ -24,37 +21,21 @@ type App struct {
 	screenManager   *screenmanager.Screen
 	messageManager  *message.Manager
 	configService   *config.Service
-	databaseService plugin.DatabasePlugin
-	pluginManager   *plugin.Manager
+	databaseService database.DatabaseIntegration
 }
 
 func NewApp() *App {
 	keys := keybinding.NewKeymap()
 	configService := config.NewService()
-
-	logger := hclog.New(&hclog.LoggerOptions{
-		Name:       "lazydb",
-		Level:      hclog.Trace,
-		Output:     os.Stdout,
-		JSONFormat: true,
-	})
-	pluginManager := plugin.NewManager(logger)
-	pluginManager.LoadPlugins("bin")
-
-	dbPlugin, ok := pluginManager.GetPlugin("postgres")
-	if !ok {
-		slog.Error("App.NewApp", "error", "could not get plugin")
-		panic("could not get plugin")
-	}
+	pgdb := database.NewPostgres()
 
 	return &App{
 		keys:            keys,
 		configService:   configService,
-		databaseService: dbPlugin,
-		pluginManager:   pluginManager,
+		databaseService: pgdb,
 		screenManager: screenmanager.NewScreen(&common.ScreenProps{
 			MessageManager:  message.NewManager(),
-			DatabaseService: dbPlugin,
+			DatabaseService: pgdb,
 			ConfigService:   configService,
 			Keymap:          keys,
 		}),
@@ -89,7 +70,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// return a, a.messageManager.NewErrorCmd(err)
 		}
 
-		err = a.databaseService.Connect(fmt.Sprintf("postgres://%s:%s@%s:%s/%s", consCfg.User, consCfg.Password, consCfg.Host, consCfg.Port, consCfg.Database))
+		err = a.databaseService.Connect(*consCfg)
 		if err != nil {
 			slog.Error("App.Update.LoadConnectionMsg", "error", err)
 			return a, tea.Quit

@@ -1,0 +1,40 @@
+version: '3'
+
+tasks:
+  docker:up:
+    desc: Start docker compose
+    preconditions:
+      - test -f docker/docker-compose.local.yml
+    aliases: [du]
+    cmds:
+      - docker compose -f docker/docker-compose.local.yml up -d
+
+  docker:down:
+    desc: Stop docker compose
+    preconditions:
+      - test -f docker/docker-compose.local.yml
+    aliases: [dd]
+    cmds:
+      - docker compose -f docker/docker-compose.local.yml down --volumes
+
+  docker:logs:
+    desc: Show docker compose logs in real time
+    preconditions:
+      - test -f docker/docker-compose.local.yml
+    aliases: [dl]
+    cmds:
+      - docker compose -f docker/docker-compose.local.yml logs -f
+  
+  docker:purge:
+    desc: Remove all docker containers, images, and volumes
+    aliases: [dp]
+    cmds:
+      - docker compose -f docker/docker-compose.local.yml down --volumes --rmi all
+
+  docker:ps:
+    desc: Show docker compose services
+    preconditions:
+      - test -f docker/docker-compose.local.yml
+    aliases: [dps]
+    cmds:
+      - docker compose -f docker/docker-compose.local.yml ps

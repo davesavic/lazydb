@@ -6,8 +6,8 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/davesavic/lazydb/internal/service/database"
 	"github.com/davesavic/lazydb/internal/service/message"
-	"github.com/davesavic/lazydb/internal/service/plugin"
 	"github.com/davesavic/lazydb/internal/ui/common"
 	"github.com/evertras/bubble-table/table"
 )
@@ -21,7 +21,7 @@ type Model struct {
 	height      int
 
 	table   *table.Model
-	results *plugin.QueryResult
+	results *database.QueryResult
 }
 
 func NewModel(props *common.ScreenProps) *Model {

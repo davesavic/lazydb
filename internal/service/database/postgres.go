@@ -3,14 +3,22 @@ package database
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/davesavic/lazydb/internal/service/config"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
+var _ DatabaseIntegration = (*Postgres)(nil)
+
 type Postgres struct {
 	conn *pgx.Conn
+}
+
+// Name implements DatabasePlugin.
+func (p *Postgres) Name() string {
+	panic("unimplemented")
 }
 
 func NewPostgres() *Postgres {
@@ -67,52 +75,55 @@ type Result struct {
 	Rows    []map[string]any
 }
 
-func (p *Postgres) ExecuteQuery(query string) (*Result, error) {
+func (p *Postgres) Run(query string) (*QueryResult, error) {
 	rows, err := p.conn.Query(context.Background(), query)
 	if err != nil {
-		return nil, fmt.Errorf("could not execute query: %w", err)
+		return nil, err
 	}
 	defer rows.Close()
 
-	fieldDescs := rows.FieldDescriptions()
-	columns := make([]Column, len(fieldDescs))
-	for i, fd := range fieldDescs {
-		columns[i] = Column{
-			Name: fd.Name,
-			Type: fd.DataTypeOID,
-		}
+	columns := rows.FieldDescriptions()
+
+	result := &QueryResult{
+		Columns: make([]string, len(columns)),
+		Rows:    make([]map[string]any, 0),
 	}
 
-	result := Result{
-		Columns: columns,
+	for i, col := range columns {
+		result.Columns[i] = col.Name
 	}
+
 	for rows.Next() {
-		values, err := rows.Values()
+		rowValues, err := rows.Values()
 		if err != nil {
-			return nil, fmt.Errorf("could not get values: %w", err)
+			return nil, err
 		}
 
 		row := make(map[string]any)
-		for i, value := range values {
-			colName := columns[i].Name
 
-			// UUID type's OID is 2950
-			switch columns[i].Type {
-			case 2950:
-				if value != nil {
-					row[colName] = uuid.UUID(value.([16]uint8)).String()
-				}
+		for i, col := range columns {
+			if rowValues[i] == nil {
+				row[col.Name] = nil
+				continue
+			}
+
+			// Switch case for types that need special handling
+			switch v := rowValues[i].(type) {
+			case time.Time:
+				row[col.Name] = v.Format(time.RFC3339)
+			case [16]uint8:
+				row[col.Name] = uuid.UUID(v).String()
 			default:
-				row[colName] = value
+				row[col.Name] = v
 			}
 		}
 
 		result.Rows = append(result.Rows, row)
 	}
 
-	return &result, nil
+	return result, nil
 }
 
-func (p *Postgres) Close() {
-	p.conn.Close(context.Background())
+func (p *Postgres) Close() error {
+	return p.conn.Close(context.Background())
 }
